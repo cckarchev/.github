@@ -1,0 +1,23 @@
+# Reusable CI for every CCK project: install from the lockfile and run the
+# project's own `npm run verify` on the Node version in its `.node-version`.
+# The caller's job id plus this job's id make the check name the main branch
+# ruleset requires, so callers name their job `ci` ("ci / verify").
+name: Verify
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm run verify

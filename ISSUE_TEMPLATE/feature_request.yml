@@ -1,0 +1,16 @@
+name: Feature request
+description: Something you would like the tool to do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you want to do
+      description: The situation you are in and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: Optional. A sketch, a description, or another tool that does it well.

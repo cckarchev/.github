@@ -1,0 +1,25 @@
+# Reusable auto-merge for Dependabot pull requests. Patch and minor updates
+# are queued to squash merge once the required checks pass; majors stay open
+# for a person to review. Needs auto-merge enabled on the repository and a
+# required check, so it only applies to public repositories on GitHub Free.
+name: Dependabot auto-merge
+
+on:
+  workflow_call:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - id: metadata
+        uses: dependabot/fetch-metadata@v3
+      - if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}

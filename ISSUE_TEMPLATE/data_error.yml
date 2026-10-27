@@ -1,0 +1,26 @@
+name: Data error
+description: A wrong card, unit, stat or rule.
+labels: [data]
+body:
+  - type: input
+    id: item
+    attributes:
+      label: Card, unit or rule
+      placeholder: Ogre Champion
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What is wrong
+      description: The value the tool shows and the correct one.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Where the correct value comes from, so it can be checked.
+      placeholder: Rulebook p. 64, or the 2024 errata
+    validations:
+      required: true

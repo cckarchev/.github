@@ -23,6 +23,10 @@ REQUIRED_CHECK="ci / verify"
 
 RULESET_NAME="main"
 
+# GitHub's built-in id for the repository admin role, the actor the ruleset
+# lets bypass it.
+ADMIN_ROLE_ID=5
+
 CI_WORKFLOW=".github/workflows/ci.yml"
 
 description_for() {
@@ -116,7 +120,8 @@ gh api -X PUT "repos/$full/private-vulnerability-reporting" --silent
 
 # The main branch takes changes only through a pull request that passes CI,
 # with no approvals needed so a maintainer can merge their own. No force
-# pushes and no deleting the branch.
+# pushes and no deleting the branch. Admins bypass it, so a small change can
+# go straight to main; everyone else, Dependabot included, goes through CI.
 status_checks_rule=""
 
 if has_file "$CI_WORKFLOW"; then
@@ -142,6 +147,13 @@ ruleset=$(
   "name": "$RULESET_NAME",
   "target": "branch",
   "enforcement": "active",
+  "bypass_actors": [
+    {
+      "actor_id": $ADMIN_ROLE_ID,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ],
   "conditions": {
     "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
   },

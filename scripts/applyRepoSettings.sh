@@ -6,8 +6,10 @@
 # Usage: scripts/applyRepoSettings.sh <repo>
 # Needs the gh CLI, signed in with admin rights on the repository.
 #
-# Description comes from the repository's package.json. Homepage and topics
-# come from the tables below; add a line there for a new repository.
+# Description comes from the repository's package.json, or from the table
+# below for a repository without one. Homepage and topics come from tables
+# too; add a line there for a new repository. The ruleset requires the CI
+# check only where the repository has a CI workflow to report it.
 # Auto-merge, the main branch ruleset and private vulnerability reporting are
 # only applied to public repositories: GitHub Free does not offer them on
 # private ones.
@@ -21,9 +23,18 @@ REQUIRED_CHECK="ci / verify"
 
 RULESET_NAME="main"
 
+CI_WORKFLOW=".github/workflows/ci.yml"
+
+description_for() {
+  case "$1" in
+    .github) echo "Organization-wide files for the Centro Cultural Karchev repositories." ;;
+    *) echo "" ;;
+  esac
+}
+
 homepage_for() {
   case "$1" in
-    cck-shared) echo "" ;;
+    cck-shared | .github) echo "" ;;
     cckarchev-web) echo "https://www.cckarchev.ar" ;;
     gb-parametric-tokens) echo "https://gb-tokens.cckarchev.ar" ;;
     *) echo "https://$1.cckarchev.ar" ;;
@@ -52,9 +63,17 @@ full="$ORG/$repo"
 
 visibility=$(gh repo view "$full" --json visibility --jq .visibility)
 
-description=$(gh api "repos/$full/contents/package.json" \
-  -H "Accept: application/vnd.github.raw+json" \
-  --jq '.description // ""')
+has_file() {
+  gh api "repos/$full/contents/$1" --silent 2>/dev/null
+}
+
+if has_file package.json; then
+  description=$(gh api "repos/$full/contents/package.json" \
+    -H "Accept: application/vnd.github.raw+json" \
+    --jq '.description // ""')
+else
+  description=$(description_for "$repo")
+fi
 
 echo "Settings for $full ($visibility)"
 
@@ -89,13 +108,34 @@ if [[ "$visibility" != "PUBLIC" ]]; then
   exit 0
 fi
 
-gh repo edit "$full" --enable-auto-merge
+# Through the REST API: `gh repo edit --enable-auto-merge` reports success
+# without changing the setting.
+gh api -X PATCH "repos/$full" --silent -F allow_auto_merge=true
 
 gh api -X PUT "repos/$full/private-vulnerability-reporting" --silent
 
 # The main branch takes changes only through a pull request that passes CI,
 # with no approvals needed so a maintainer can merge their own. No force
 # pushes and no deleting the branch.
+status_checks_rule=""
+
+if has_file "$CI_WORKFLOW"; then
+  status_checks_rule=$(
+    cat <<EOF
+,
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "required_status_checks": [{ "context": "$REQUIRED_CHECK" }]
+      }
+    }
+EOF
+  )
+else
+  echo "No $CI_WORKFLOW: the ruleset does not require a CI check."
+fi
+
 ruleset=$(
   cat <<EOF
 {
@@ -118,14 +158,7 @@ ruleset=$(
         "required_review_thread_resolution": false,
         "allowed_merge_methods": ["squash"]
       }
-    },
-    {
-      "type": "required_status_checks",
-      "parameters": {
-        "strict_required_status_checks_policy": false,
-        "required_status_checks": [{ "context": "$REQUIRED_CHECK" }]
-      }
-    }
+    }$status_checks_rule
   ]
 }
 EOF

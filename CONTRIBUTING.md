@@ -6,6 +6,9 @@ focused contributions are the easiest to review.
 
 ## Reporting a problem
 
+Issues and pull request discussions are welcome in English or Spanish. The
+code and the commit history stay in English.
+
 Open an issue with the matching template:
 
 - **Bug report** for something that does not work as it should.
